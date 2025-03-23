@@ -1,0 +1,109 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtualenv
+venv/
+ENV/
+env/
+env.bak/
+.venv/
+
+# Pytest cache
+.pytest_cache/
+.cache/
+
+# FastAPI and Uvicorn logs
+logs/
+*.log
+*.out
+*.err
+
+# Coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+.cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# dotenv environment variables file
+.env
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# VSCode workspace settings
+.vscode/
+
+# PyCharm IDE files
+.idea/
+
+# Docker files
+*.stackdump
+docker-compose.override.yml
+
+# SQLite database files
+*.sqlite3
+*.db
+
+# macOS system files
+.DS_Store
+
+# Windows system files
+Thumbs.db
+
+# Python compiled files
+*.pyo
+*.pyd
+
+# Additional files
+*.bak
+*.swp
+
+# pytest xml reports
+test-results.xml
+
+# Local binary files or executable
+bin/
+*.exe
+*.dll
+*.deb
+*.dmg
+*.pkg
+*.rpm
+
+# Application-specific
+uploads/
+media/
