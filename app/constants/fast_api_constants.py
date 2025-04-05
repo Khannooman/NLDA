@@ -1,5 +1,5 @@
 class FastAPIConstants:
-    TITLE = 'PicksieAI | Server'
+    TITLE = 'NLDA | Server'
     DESCRIPTION = """
 ### Project Description: NLDA (Natural Language Data Analysis)
 

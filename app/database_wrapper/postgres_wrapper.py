@@ -20,6 +20,5 @@ class PostgreSQLWrapper(DatabaseWrapper):
             password=self.connection_config["password"],
             host=self.connection_config["host"],
             port=self.connection_config.get("port", 5432),
-            database=self.connection_config["database"],
-            schema=self.connection_config["schema"],
+            database=self.connection_config["database"]
         )

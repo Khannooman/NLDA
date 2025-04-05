@@ -1,10 +1,9 @@
 from enum import Enum
 
-class FileExtension(Enum):
+class FileExtensions(Enum):
     PDF = '.pdf'
     DOCX = '.docx'
     HTML = '.html'
-    HTML = '.htm'
     TXT = '.txt'
     CSV = '.csv'
     JSON = '.json'

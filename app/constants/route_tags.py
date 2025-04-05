@@ -3,3 +3,4 @@ class RouteTags:
     DOCS = "Documentations"
     AUTH = "Authentication"
     TESTS = "API Testings" 
+    CONNECTION = "Connection"
