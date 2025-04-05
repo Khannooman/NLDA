@@ -3,7 +3,7 @@ from enum import Enum
 class DatabaseType(Enum):
     MSSQL = 'mssql'
     MYSQL = 'mysql'
-    POSTGRESSQL = 'postgres'
+    POSTGRESSQL = 'postgresql'
     SQLITE = 'sqlite'
     AWS_ATHENA = 'AWSAthena'
     DYNAMODB = 'dynamodb'

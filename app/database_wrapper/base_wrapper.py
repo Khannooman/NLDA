@@ -13,10 +13,10 @@ class DatabaseConnectionError(Exception):
 class DatabaseWrapper(ABC):
     """Abstract base class for database wrappers."""
 
-    def __init__(self, connectoin_config: Dict[str, str]):
-        self.connection_config = connectoin_config
+    def __init__(self, connection_config: Dict[str, str]):
+        self.connection_config = connection_config
         self.engine: Optional[Engine] = None
-        self.metadata: MetaData
+        # self.metadata: MetaData
 
     @abstractmethod
     def default_schema(self) -> str:
@@ -25,7 +25,7 @@ class DatabaseWrapper(ABC):
 
     @abstractmethod
     def _create_connection_url(self) -> Engine:
-        """Create a SQLAlchemy URL for the specific databse connection."""
+        """Create a SQLAlchemy URL for the specific database connection."""
         pass
 
     def connect(self) -> None:
@@ -33,17 +33,17 @@ class DatabaseWrapper(ABC):
         try:
             connection_url = self._create_connection_url()
             self.engine = create_engine(connection_url)
-            self.metadata.reflect(bind=self.engine)
-            logger.info(f"Connected to {self.__class__.__name__} databse: {self.connection_config['databse']}")
+            # self.metadata.reflect(bind=self.engine)
+            logger.info(f"Connected to {self.__class__.__name__} database: {self.connection_config['database']}")
         except Exception as e:
             logger.error(f"Failed to connect to {self.__class__.__name__}: {str(e)}")
             raise DatabaseConnectionError(f"Connecton Failed: {str(e)}")
         
     def disconnect(self) -> None:
-        """Close the databse connection."""
+        """Close the database connection."""
         if self.engine:
             self.engine.dispose()
-            logger.info(f"Disconnected from {self.__class__.__name__} databae: {self.connection_config['databae']}")
+            logger.info(f"Disconnected from {self.__class__.__name__} : {self.connection_config['database']}")
 
     def get_schema(self) -> Dict[str, Dict[str, List[Dict[str, str]]]]:
         """

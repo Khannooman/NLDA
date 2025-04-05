@@ -8,3 +8,4 @@ class RoutePaths:
     DOCS = "/docs"
     STATIC = "/static"
     PING = "/api/v1/health"
+    CONNECTION = "/connection"
