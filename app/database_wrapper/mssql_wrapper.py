@@ -1,18 +1,15 @@
 from typing import Dict
 from sqlalchemy.engine import URL
-from app.database_wrapper.base_wrapper import DatabaseWrapper, DatabaseConnectionError
 import logging
 
 logger = logging.getLogger(__name__)
 
-class MSSQLWrapper(DatabaseWrapper):
+class MSSQLWrapper:
     """Wrapper for MSSQL."""
-
-    def default_schema(self) -> str:
-        """Returns the default schema for MSSQL."""
-        return "dbo"
+    def __init__(self, connection_config: Dict[str, str]):
+        self.connection_config = connection_config
     
-    def _create_connection_url(self) -> URL:
+    def create_connection_url(self) -> URL:
         """Create SQLAlchemy URL for MSSQL."""
         return URL.create(
             "MSSQL+MSSQLconnector",

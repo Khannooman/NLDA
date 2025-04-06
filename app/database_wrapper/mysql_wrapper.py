@@ -1,18 +1,16 @@
 from typing import Dict
 from sqlalchemy.engine import URL
-from app.database_wrapper.base_wrapper import DatabaseWrapper, DatabaseConnectionError
+from app.database_wrapper.database_handler import DatabaseHandler
 import logging
 
 logger = logging.getLogger(__name__)
 
-class MySQLWrapper(DatabaseWrapper):
+class MySQLWrapper:
     """Wrapper for MySQL."""
-
-    def default_schema(self) -> str:
-        """Returns the default schema for MySQL (database name)."""
-        return self.connection_config['database']
+    def __init__(self, connection_config: Dict[str, str]):
+        self.connection_config = connection_config
     
-    def _create_connection_url(self) -> URL:
+    def create_connection_url(self) -> URL:
         """Create SQLAlchemy URL for MySQL."""
         return URL.create(
             "MySQL+mysqlconnector",

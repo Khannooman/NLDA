@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Union
 from app.database_wrapper.base_wrapper  import DatabaseWrapper, DatabaseConnectionError
 from app.database_wrapper.mssql_wrapper import MSSQLWrapper
 from app.database_wrapper.mysql_wrapper import MySQLWrapper
@@ -8,20 +8,14 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-def extract_schema(db_type: DatabaseType, connection_config: Dict[str, str]) -> Dict[str, Dict[str, List[Dict[str, str]]]]:
+def data_base_wrapper_map(db_type: DatabaseType) ->  Union[MSSQLWrapper, MySQLWrapper, PostgreSQLWrapper]:
     """
-    Extract schema from a specified database type using the provided connection config.
-    
     Args:
         db_type (str): Type of database
-        connection_config (Dict[str, str]): Database connection details
-    
     Returns:
-        Dict: Schema structure with tables and columns
-    
+        Dict: return the wrapper class for the database type
     Raises:
         ValueError: If db_type is unsupported
-        DatabaseConnectionError: If connection fails
     """
 
     # Mapping of Database enum in wrapper classes
@@ -38,13 +32,4 @@ def extract_schema(db_type: DatabaseType, connection_config: Dict[str, str]) -> 
         raise ValueError(f"Unsupported database type: {unsupported_type}")
     
     wrapper_class = db_wrapper_map[db_type]
-    wrapper = wrapper_class(connection_config=connection_config)
-    try:
-        wrapper.connect()
-        schema = wrapper.get_schema()
-        return schema
-    except DatabaseConnectionError as e:
-        logging.error(f"Schema extraction failed for {db_type}: {str(e)}")
-        raise e
-    finally:
-        wrapper.disconnect()
+    return wrapper_class
