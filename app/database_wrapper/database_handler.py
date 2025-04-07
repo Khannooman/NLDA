@@ -54,6 +54,9 @@ class DatabaseHandler:
         Returns:
             bool: True if connection successful, False otherwise
         """
+        if self.connection and not self.connection.closed:
+            return True
+
         try:
             self.engine = create_engine(self.connection_url)
             self.connection = self.engine.connect()
@@ -121,7 +124,7 @@ class DatabaseHandler:
             target_dialect = self.dialect_name
         
         normalized_dialect = self.normalize_dialect(target_dialect)
-        
+
         # Apply dialect-specific transformations
         if normalized_dialect == 'postgresql':
             return self._adapt_to_postgresql(query)
@@ -139,24 +142,25 @@ class DatabaseHandler:
     
     def _adapt_to_postgresql(self, query: str) -> str:
         """
-        Adapt a SQL query to PostgreSQL dialect.
+        # Adapt a SQL query to PostgreSQL dialect.
         
-        Args:
-            query: SQL query to adapt
+        # Args:
+        #     query: SQL query to adapt
             
-        Returns:
-            str: Adapted SQL query
-        """
-        # Replace LIMIT x OFFSET y with LIMIT x OFFSET y
-        query = re.sub(r'LIMIT\s+(\d+)\s+OFFSET\s+(\d+)', r'LIMIT \1 OFFSET \2', query, flags=re.IGNORECASE)
+        # Returns:
+        #     str: Adapted SQL query
+        # """
+        # # Replace LIMIT x OFFSET y with LIMIT x OFFSET y
+        # query = re.sub(r'LIMIT\s+(\d+)\s+OFFSET\s+(\d+)', r'LIMIT \1 OFFSET \2', query, flags=re.IGNORECASE)
+        # print(query)
+
+        # # Replace ISNULL with IS NULL
+        # query = re.sub(r'ISNULL\(([^,]+)\)', r'\1 IS NULL', query, flags=re.IGNORECASE)
         
-        # Replace ISNULL with IS NULL
-        query = re.sub(r'ISNULL\(([^,]+)\)', r'\1 IS NULL', query, flags=re.IGNORECASE)
-        
-        # Replace TOP with LIMIT
-        query = re.sub(r'SELECT\s+TOP\s+(\d+)', r'SELECT', query, flags=re.IGNORECASE)
-        query = re.sub(r'FROM(.*?)ORDER BY', r'FROM\1ORDER BY', query, flags=re.IGNORECASE)
-        query = re.sub(r'ORDER BY(.*?)$', r'ORDER BY\1 LIMIT \2', query, flags=re.IGNORECASE)
+        # # Replace TOP with LIMIT
+        # query = re.sub(r'SELECT\s+TOP\s+(\d+)', r'SELECT', query, flags=re.IGNORECASE)
+        # query = re.sub(r'FROM(.*?)ORDER BY', r'FROM\1ORDER BY', query, flags=re.IGNORECASE)
+        # query = re.sub(r'ORDER BY(.*?)$', r'ORDER BY\1 LIMIT \2', query, flags=re.IGNORECASE)
         
         return query
     
@@ -267,13 +271,13 @@ class DatabaseHandler:
         try:
             # Adapt the query to the current dialect
             adapted_query = self.adapt_query(query)
-            
+            print(adapted_query)
             # Execute the query
             result = self.connection.execute(text(adapted_query))
-            
+            column_names = result.keys()
             # Fetch results if it's a SELECT query
             if result.returns_rows:
-                rows = [dict(row) for row in result]
+                rows = [dict(zip(column_names, row)) for row in result]
                 return True, rows
             else:
                 return True, f"Query executed successfully. Rows affected: {result.rowcount}"

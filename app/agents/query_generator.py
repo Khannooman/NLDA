@@ -27,7 +27,7 @@ class QueryGenerator:
 
     def _setup_prompts(self) -> None:
         """set up the prompts for the query generation"""
-        self.query_generation_prompt = ChatMessagePromptTemplate.from_template("""
+        self.query_generation_prompt = ChatPromptTemplate.from_template("""
 You are an expert SQL query generator. Your task is to convert natural language questions into correct SQL queries.
 
 Database Dialect: {dialect}
@@ -50,6 +50,9 @@ Generate a SQL query that answers the user's question. Follow these guidelines:
 7. Do not use any functions that are not supported by the dialect
 8. Ensure the query is syntactically correct
 9. Explain your reasoning step by step
+10. Return the SQL query wrapped in markdown code blocks like this.
+```sql
+    SELECT * FROM table
 
 SQL Query:
 """)
@@ -89,7 +92,11 @@ Generate a SQL query that answers the user's question. Follow these guidelines:
 6. Do not use any tables or columns that are not in the schema
 7. Do not use any functions that are not supported by the dialect
 8. Ensure the query is syntactically correct
-9. Explain your reasoning step by step                                                              
+9. Explain your reasoning step by step
+10. Return the SQL query wrapped in markdown code blocks like this.
+```sql
+    SELECT * FROM table                                                               
+                                                                                                                             
 
 SQL Query:                                                                
 """)
@@ -136,7 +143,6 @@ SQL Query:
         Returns:
             Dictionary of example questions and queries
         """
-        # This is a simplified approach - in a real implementation, you would have a more
         # sophisticated way of generating or retrieving example queries
         
         # Extract table names from schema
@@ -217,27 +223,31 @@ SQL Query:
         
         if use_few_shot:
             examples = self._get_example_queries(schema, dialect)
-            prompt = self.few_shot_prompt.format(
-                dialect=dialect,
-                schema=schema,
-                dialect_features=formatted_dialect_features,
-                question=question,
-                **examples
+            input_values = {
+                'dialect': dialect,
+                'schema': schema,
+                'dialect_features': formatted_dialect_features,
+                'question': question
+            }
+            input_values.update(examples)
+
+            response = self.llm.run_chain(
+                prompt_template=self.query_generation_prompt, 
+                input_values=input_values
             )
         else:
-            prompt = self.query_generation_prompt.format(
-                dialect=dialect,
-                schema=schema,
-                dialect_features=formatted_dialect_features,
-                question=question
+            input_values = {
+                'dialect': dialect,
+                'schema': schema,
+                'dialect_features': formatted_dialect_features,
+                'question': question
+            }
+
+            response = self.llm.run_chain(
+                prompt_template=self.query_generation_prompt, 
+                input_values=input_values
             )
-        
-        response = self.llm.run_chain(
-            prompt_template=prompt, 
-            output_parser=LLMResponseSchemas.common_output_parser
-            )
-        print(response)
-        # Extract the SQL query from the response
+            # Extract the SQL query from the response
         response_text = response
 
         
@@ -272,6 +282,7 @@ SQL Query:
             "explanation": explanation,
             "full_response": response_text
         }
+
     def generate_query_with_retry(self, question: str, schema: str, dialect: str,
                                  dialect_features: Optional[Dict[str, Any]] = None,
                                  max_retries: int = 3) -> Dict[str, Any]:
@@ -288,6 +299,7 @@ SQL Query:
         Returns:
             Dictionary containing the generated query, explanation, and retry information
         """
+
         result = self.generate_query(question, schema, dialect, dialect_features, use_few_shot=True)
         retries = 0
         retry_history = [result]
@@ -332,7 +344,6 @@ Corrected SQL query:
 """
             
             response = self.llm.run_chain(retry_prompt, output_parser=LLMResponseSchemas.common_output_parser)
-            print("Retry response:", response)
             response_text = response
             
             # Extract the SQL query from the response
@@ -374,4 +385,3 @@ Corrected SQL query:
             "retries": retries,
             "retry_history": retry_history
         }
-

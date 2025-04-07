@@ -8,7 +8,7 @@ for consumption by an LLM.
 """
 
 import sqlalchemy
-from sqlalchemy import inspect, MetaData
+from sqlalchemy import inspect, MetaData, URL
 from typing import List, Dict, Any, Optional
 from app.database_wrapper.database_handler import DatabaseHandler
 import re
@@ -19,31 +19,10 @@ class SchemaParser(DatabaseHandler):
     for SQL query generation.
     """
     
-    def __init__(self):
+    def __init__(self, connection_url: URL):
         """Initialize the SchemaParser."""
-        super().__init__()
-        # self.metadata = None
-        # self.inspector = None
-        # self.dialect = None
-            
-    
-    # def connect(self, connection_string: str) -> None:
-    #     """
-    #     Connect to a database and prepare for schema parsing.
-        
-    #     Args:
-    #         connection_string: SQLAlchemy connection string
-    #     """
-    #     try:
-    #         engine = sqlalchemy.create_engine(connection_string)
-    #         self.metadata = MetaData()
-    #         self.metadata.reflect(bind=engine)
-    #         self.inspector = inspect(engine)
-    #         self.dialect = engine.dialect.name
-    #         return True
-    #     except Exception as e:
-    #         print(f"Error connecting to database: {e}")
-    #         return False
+
+        super().__init__(connection_url=connection_url)
     
     def get_all_tables(self) -> List[str]:
         """
@@ -120,11 +99,11 @@ class SchemaParser(DatabaseHandler):
         
         # This is a simplified approach - actual implementation would depend on the dialect
         table = self.metadata.tables.get(table_name)
-        if not table:
+        if table is not None:
+            create_stmt = str(sqlalchemy.schema.CreateTable(table).compile(dialect=self.dialect))
+            return create_stmt
+        else:
             raise ValueError(f"Table {table_name} not found in metadata.")
-        
-        create_stmt = str(sqlalchemy.schema.CreateTable(table).compile(dialect=self.metadata.bind.dialect))
-        return create_stmt
     
     def get_sample_rows(self, table_name: str, limit: int = 3) -> List[Dict]:
         """
@@ -141,18 +120,17 @@ class SchemaParser(DatabaseHandler):
             raise ValueError("Not connected to a database. Call connect() first.")
         
         table = self.metadata.tables.get(table_name)
-        if not table:
+        if table is not None:
+            try:
+                result = self.connection.execute(statement=table.select().limit(limit))
+                column_names = result.keys()
+                rows = [dict(zip(column_names, row)) for row in result]
+                return rows
+            except Exception as e:
+                print(f"Error getting sample rows: {e}")
+                return []
+        else:
             raise ValueError(f"Table {table_name} not found in metadata.")
-        
-        try:
-            connection = self.metadata.bind.connect()
-            result = connection.execute(table.select().limit(limit))
-            rows = [dict(row) for row in result]
-            connection.close()
-            return rows
-        except Exception as e:
-            print(f"Error getting sample rows: {e}")
-            return []
     
     def get_relevant_tables(self, question: str, tables: List[str]) -> List[str]:
         """
@@ -208,7 +186,6 @@ class SchemaParser(DatabaseHandler):
         for table_name in tables:
             create_stmt = self.get_create_table_statement(table_name)
             sample_rows = self.get_sample_rows(table_name)
-            
             schema_info.append(f"-- Table: {table_name}")
             schema_info.append(create_stmt)
             
@@ -238,7 +215,6 @@ class SchemaParser(DatabaseHandler):
         
         # Get all tables
         all_tables = self.get_all_tables()
-        
         # Determine relevant tables if a question is provided
         if question:
             relevant_tables = self.get_relevant_tables(question, all_tables)
@@ -255,9 +231,9 @@ class SchemaParser(DatabaseHandler):
         
         # Format schema for LLM
         formatted_schema = self.format_schema_for_llm(relevant_tables)
-        
+
         return {
-            "dialect": self.dialect,
+            "dialect": self.dialect_name,
             "all_tables": all_tables,
             "relevant_tables": relevant_tables,
             "tables_info": tables_info,
