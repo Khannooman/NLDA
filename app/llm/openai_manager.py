@@ -8,6 +8,7 @@ from app.utils.utility_manager import UtilityManager
 from app.enums.env_keys import EnvKeys
 from langchain_community.callbacks import get_openai_callback
 from langchain.schema.runnable import RunnableSequence
+from langchain_core.output_parsers import JsonOutputParser
 
 class OpenAIManager(UtilityManager):
     def __init__(self):
@@ -20,7 +21,7 @@ class OpenAIManager(UtilityManager):
         
         os.environ["OPENAI_API_KEY"] = self.OPENAI_KEY
         
-    def run_chain(self, prompt_template: PromptTemplate, output_parser: StructuredOutputParser = None, input_values: Dict = {}, model: str = None) -> Union[dict, str]:
+    def run_chain(self, prompt_template: PromptTemplate, output_parser: JsonOutputParser = None, input_values: Dict = {}, model: str = None) -> Union[dict, str]:
         try:
             llm_model = ChatOpenAI(
                     model_name=model or self.MODEL,
@@ -38,7 +39,9 @@ class OpenAIManager(UtilityManager):
 
                 if output_parser:
                     try:
-                        result = output_parser.parse(text_response)
+                        print(text_response)
+                        result = output_parser.parse(text=text_response)
+                        print(result)
                         result.update({
                             "total_tokens": cb.total_tokens,
                             "completion_tokens": cb.completion_tokens,
@@ -47,6 +50,7 @@ class OpenAIManager(UtilityManager):
                         })
                         return result
                     except Exception as parse_error:
+                        print(parse_error)
                         logging.error("Error parsing output")
                         raise parse_error
 

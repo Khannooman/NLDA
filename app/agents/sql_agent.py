@@ -4,14 +4,10 @@ SQL Agent - Main Integration Module
 This module integrates all components into the cohesive LangGraph Agent
 that can generate and execute SQL queries based on natural language sessions.
 """
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
+from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate
-from IPython.display import display, Image
 from langgraph.graph import START, END, StateGraph
-from langgraph.prebuilt import ToolNode
 from sqlalchemy import URL
-
-# Import Our Components
 from app.database_wrapper.schema_parser import SchemaParser
 from app.database_wrapper.database_handler import DatabaseHandler
 from app.agents.query_generator import QueryGenerator
@@ -19,8 +15,8 @@ from app.agents.query_validator import QueryValidator
 from app.models.agent_state_model import AgentState
 from app.llm.openai_manager import OpenAIManager
 from app.prompts.llm_response_schema import LLMResponseSchemas
-
-
+from app.prompts.sql_agent_prompt import Agentprompts
+import logging
 
 class SQLAgents:
     "Node for SQL Agents"
@@ -33,6 +29,8 @@ class SQLAgents:
         self.query_generator = QueryGenerator()
         self.query_validator = QueryValidator()
         self.llm = OpenAIManager()
+        self.prompts = Agentprompts()
+
 
     def parse_schema(self, state: AgentState) -> AgentState:
         """Parse the database schema
@@ -51,7 +49,7 @@ class SQLAgents:
         question = last_message.content
         try:
             # parse the schema
-            print("Parsing schema...")
+            logging.info("Parsing schema...")
             schema_info = self.schema_parser.parse_schema(question)
             #Update the schema 
             state.schema_info = schema_info
@@ -111,7 +109,7 @@ class SQLAgents:
 
         try:
             #Generate the query
-            print("Generating query...")
+            logging.info("Generating query...")
             generated_query = self.query_generator.generate_query(
                 question=question,
                 schema=state.schema_info['formatted_schema'],
@@ -162,9 +160,30 @@ class SQLAgents:
             )
             return state
         
+         # Extract the last user message
+        last_message = state.messages[-1]
+        if not isinstance(last_message, HumanMessage):
+            last_user_message = None
+            for message in reversed(state.messages):
+                if isinstance(message, HumanMessage):
+                    last_user_message = message
+                    break
+                
+            if not last_user_message:
+                state.error = "No user question found"
+                state.messages.append(
+                    AIMessage(content="I need a user question to generate a query")
+                )
+                return state
+            
+            question = last_user_message.content
+            
+        else:
+            question = last_message.content
+        
         try:
             # Validate the query
-            print("Validating query...")
+            logging.info("Validating query...")
             validation_result = self.query_validator.validate(
                 query=state.generated_query["query"],
                 schema=state.schema_info["formatted_schema"],
@@ -192,6 +211,77 @@ class SQLAgents:
                 AIMessage(content=f"I encountered an error while validating the SQL query: {str(e)}")
             )
         return state
+    
+    def fixed_query(self, state: AgentState) -> AgentState:
+        """
+        Execute the query fixer
+
+        Args:
+            state (AgentState): current agent state
+
+        Returns:
+            AgentState: Update agent state
+        """
+
+        # check if we have error
+        if not state.error:
+            state.messages.append(
+                AIMessage(content="I need to execute a SQL query before I can fix it.")
+            )
+            return state
+        
+        if not state.generated_query:
+            state.messages.append(
+                AIMessage(content="I need to generate a SQL query before I can fix it")
+            )
+            return state
+        
+         # Extract the last user message
+        last_message = state.messages[-1]
+        if not isinstance(last_message, HumanMessage):
+            last_user_message = None
+            for message in reversed(state.messages):
+                if isinstance(message, HumanMessage):
+                    last_user_message = message
+                    break
+                
+            if not last_user_message:
+                state.error = "No user question found"
+                state.messages.append(
+                    AIMessage(content="I need a user question to generate a query")
+                )
+                return state
+            
+            question = last_user_message.content
+            
+        else:
+            question = last_message.content
+
+        try:
+            logging.info("Fixing Error...")
+            new_query = self.query_generator.query_fixer(
+                question=question,
+                schema=state.schema_info['schema'],
+                dialect=state.schema_info['dialect'],
+                previous_query=state.generated_query['query'],
+                error=state.error
+            )
+
+            state.generated_query = new_query
+
+            # Add a message to indicate success
+            state.messages.append(
+                AIMessage(content=f"I've generated a new SQL query to fix the error :\n\n```sql\n{new_query['query']}\n```\n\nNow I'll validate this query to make sure it's correct.")
+            )
+        except Exception as e:
+            # Handle errors
+            state.error = f"Error generating query: {str(e)}"
+            state.messages.append(
+                AIMessage(content=f"I encountered an error while generating the SQL query: {str(e)}")
+            )
+        
+        return state
+
 
     def execute_query(self, state: AgentState) -> AgentState:
         """
@@ -231,24 +321,9 @@ class SQLAgents:
                 if isinstance(result, list):
                     # Format the result for display
                     if len(result) > 0:
-                        # Get the keys from the first result
-                        keys = list(result[0].keys())
-                        
-                        # Create a table header
-                        table_header = " | ".join(keys)
-                        table_separator = "-" * len(table_header)
-                        
-                        # Create table rows
-                        table_rows = []
-                        for row in result[:10]:  # Limit to 10 rows for display
-                            table_rows.append(" | ".join([str(row[key]) for key in keys]))
-                        
-                        # Create the table
-                        table = f"{table_header}\n{table_separator}\n" + "\n".join(table_rows)
-                        
                         # Add a message with the result
                         state.messages.append(
-                            AIMessage(content=f"I executed the SQL query and got {len(result)} results. Here are the first {min(10, len(result))} rows:\n\n```\n{table}\n```")
+                            AIMessage(content=f"I executed the SQL query and got {len(result)} results.")
                         )
                     else:
                         state.messages.append(
@@ -267,12 +342,10 @@ class SQLAgents:
                 state.messages.append(
                     AIMessage(content="Let me try to fix the query and execute it again.")
                 )
-                
                 # Regenerate the query
                 if counter < 5:
                     counter += 1
-                    return self.generate_query(state)
-                    
+                    return self.fixed_query(state)         
             
         except Exception as e:
             # Handle errors
@@ -322,45 +395,33 @@ class SQLAgents:
         try:
             print("Generating final answer...")
             # Create a prompt for the LLM to generate a final answer
-            prompt = ChatPromptTemplate.from_template("""
-    Based on the following information, provide a comprehensive answer to the user's question.
-
-    User's Question: {question}
-                                                      
-    SQL Query Used: 
-    {query}
-
-    Query Results:
-    {result}
-
-    Please provide a clear, concise answer that directly addresses the user's question.
-    Include relevant data from the query results to support your answer.
-    If appropriate, include any insights or patterns you notice in the data.
-    """)
+            prompt = ChatPromptTemplate.from_template(self.prompts.final_response_prompt)
             
             # Use the LLM to generate a final answer
-
             input_values = {
                 "query": state.generated_query["query"],
-                "result": state.execution_result["result"],
-                "question": question
+                "response": state.execution_result,
+                "user_input": question
             }
-            response = self.llm.run_chain(prompt_template=prompt, input_values=input_values)
-            
+            response = self.llm.run_chain(
+                prompt_template=prompt,
+                output_parser=LLMResponseSchemas.common_output_parser,
+                input_values=input_values)
+            # print(response)
             # Update the state
             state.final_answer = response
             
             # Add a message with the final answer
             state.messages.append(
-                AIMessage(content=state.final_answer)
+                AIMessage(content="Succfully generated final response")
             )
+            
         except Exception as e:
             # Handle errors
             state.error = f"Error generating final answer: {str(e)}"
             state.messages.append(
                 AIMessage(content=f"I encountered an error while generating the final answer: {str(e)}")
             )
-        
         return state
 
     def should_continue(self, state: AgentState) -> str:
@@ -414,9 +475,7 @@ def create_sql_agent(connection_url: URL) -> StateGraph:
     Returns:
         StateGraph: return the compiled workflow
     """
-    
     sqlagents = SQLAgents(connection_url=connection_url)
-
     # create the workflow
     workflow = StateGraph(AgentState)
 
@@ -447,15 +506,9 @@ def create_sql_agent(connection_url: URL) -> StateGraph:
     workflow.add_edge("validate_query", "execute_query")
     workflow.add_edge("execute_query", "generate_final_answer")
     workflow.add_edge("generate_final_answer", END)
-    print("Workflow Created")
 
     app = workflow.compile()
-    print("Workflow Compiled")
-
-    try:
-        print(app.get_graph().draw_mermaid())
-    except Exception as e:
-        print(f"Error displaying graph: {e}")
+    logging.info("Graph successfully compiled")
     return app
 
 

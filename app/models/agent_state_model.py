@@ -8,7 +8,7 @@ class AgentState(BaseModel):
     schema_info: Optional[Dict[str, Any]] = None
     generated_query: Optional[Dict[str, Any]] = None
     validation_result: Optional[Dict[str, Any]] = None
-    execution_result: Optional[Dict[str, Any]] = None
+    execution_result: Optional[List[Dict[str, Any]]] = None
     final_answer: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
 

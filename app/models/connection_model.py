@@ -1,6 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Union
-
+from typing import Union, Optional
 from app.models.mssql_model import mssqlConnectionParams
 from app.models.mysql_model import MySQLConnectionParams
 from app.models.postgresql_model import PostgresConnectionParams
@@ -11,6 +10,7 @@ class DatabaseConnectionConfig(BaseModel):
         MySQLConnectionParams,
         PostgresConnectionParams
     ] = Field(..., discriminator="db_type")
+    question: Optional[str] = Field(..., description="User inputs")
 
     class Config:
         json_schema_extra = {
@@ -26,5 +26,6 @@ class DatabaseConnectionConfig(BaseModel):
                         "sslmode": "prefer"
                     }
                 }
-            ]
+            ],
+            "questions": "Total Number of Customers"
         }

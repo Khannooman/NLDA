@@ -217,7 +217,7 @@ class SchemaParser(DatabaseHandler):
         all_tables = self.get_all_tables()
         # Determine relevant tables if a question is provided
         if question:
-            relevant_tables = self.get_relevant_tables(question, all_tables)
+            relevant_tables = self.get_all_tables()
             # If no relevant tables found, include all tables
             if not relevant_tables:
                 relevant_tables = all_tables

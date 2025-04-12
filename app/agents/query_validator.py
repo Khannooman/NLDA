@@ -1,18 +1,14 @@
 """
 Query Validator Component for SQL Agent
-
 This module provides functionality to validate SQL queries before execution.
 It checks for syntax errors, common SQL mistakes, and suggests corrections
 for invalid queries using LLMs.
 """
 
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_openai import ChatOpenAI
-from typing import Dict, List, Optional, Any, Tuple, Union
+from typing import Dict, Any
 from app.llm.openai_manager import OpenAIManager
-from app.prompts.llm_response_schema import LLMResponseSchemas
 import re
-import sqlparse
 
 class QueryValidator:
     """
@@ -49,6 +45,7 @@ Please analyze this query and check for the following issues:
 7. Potential SQL injection vulnerabilities
 8. Any other issues that would prevent the query from executing correctly
 9. Return the SQL query wrapped in markdown code blocks like this.
+10. ***If the query is unbound query add limit 10.***
 ```sql
     SELECT * FROM table
                                                                   

@@ -16,7 +16,8 @@ class StatusCodes:
     CREATED_201 = 201
 
 class ResponseModel(BaseModel, APICallStatus, StatusCodes):
-    message: str = "Executed Successfully!"
+    message: str = "Executed Successfully!",
+    answer: str = None, 
     chart_data: Optional[Dict] = None
     status_code: int = StatusCodes.OK_200
     status: Optional[str] = APICallStatus.SUCCESS
