@@ -30,11 +30,8 @@ class ResponseModel(BaseModel, APICallStatus, StatusCodes):
     history: List[Any] = []
     templates: List[dict] = []
     next_action: str = None
-    survey_id: Optional[Any] = None
-    survey_link: Optional[Any] = None
-    qr_code: Optional[Any] = None
-    survey_share_count: Optional[Any]  = None
     additionals: Any = None
+    session_id: str = None
 
 class AnalyticsResponseParser(BaseModel):
     """Prove Inside and chart data"""

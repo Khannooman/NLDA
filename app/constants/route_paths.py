@@ -9,3 +9,5 @@ class RoutePaths:
     STATIC = "/static"
     PING = "/api/v1/health"
     CONNECTION = "/connection"
+    QUERY = "/query"
+    DISCONNECT = "/disconnect"

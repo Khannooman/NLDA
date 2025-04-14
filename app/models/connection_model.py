@@ -10,7 +10,7 @@ class DatabaseConnectionConfig(BaseModel):
         MySQLConnectionParams,
         PostgresConnectionParams
     ] = Field(..., discriminator="db_type")
-    question: Optional[str] = Field(..., description="User inputs")
+    session_id: Optional[str] = Field(..., description="session id")
 
     class Config:
         json_schema_extra = {
@@ -27,5 +27,8 @@ class DatabaseConnectionConfig(BaseModel):
                     }
                 }
             ],
-            "questions": "Total Number of Customers"
+            "session_id": "dsfdf48dsf4"
         }
+
+class Disconnect(BaseModel):
+    session_id: str

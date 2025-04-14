@@ -7,10 +7,15 @@ data types, and relationships from a database and formats this information
 for consumption by an LLM.
 """
 
+import logging
 import sqlalchemy
 from sqlalchemy import inspect, MetaData, URL
 from typing import List, Dict, Any, Optional
 from app.database_wrapper.database_handler import DatabaseHandler
+from app.enums.env_keys import EnvKeys
+from langchain_core.documents import Document
+from app.embeddings.chroma import VectorSearch
+from app.utils.utility_manager import UtilityManager
 import re
 
 class SchemaParser(DatabaseHandler):
@@ -18,11 +23,33 @@ class SchemaParser(DatabaseHandler):
     A class for parsing database schemas and extracting relevant information
     for SQL query generation.
     """
-    
-    def __init__(self, connection_url: URL):
-        """Initialize the SchemaParser."""
+    def __init__(self, connection_url: Optional[URL] = None, db_handler: Optional[DatabaseHandler] = None):
+        """
+        Initialize the schema parser
 
-        super().__init__(connection_url=connection_url)
+        Args:
+            connection_url: SQLAlchemy connection URL (optional if db_handler is provided)
+            db_handler: Existing DatabaseHandler to reuse connection (Optional)
+        """
+        self.vector_search = VectorSearch()
+        self.utility_manager = UtilityManager()
+
+        if db_handler:
+            # Reuse db_handler's connection attributes
+            super().__init__(connection_url=db_handler.connection_url)
+            self.schema_parser.connection = db_handler.connection
+            self.schema_parser.engine = db_handler.engine
+            self.schema_parser.dialect = db_handler.dialect
+            self.schema_parser.dialect_name = db_handler.dialect_name
+            self.schema_parser.inspector = db_handler.inspector
+            self.schema_parser.metadata = db_handler.metadata
+
+        elif connection_url:
+            # Initialize new connections
+            super().__init__(connection_url=connection_url)
+        
+        else:
+            raise ValueError("Either connection_url or db_handler must be there")
     
     def get_all_tables(self) -> List[str]:
         """
@@ -87,7 +114,6 @@ class SchemaParser(DatabaseHandler):
     def get_create_table_statement(self, table_name: str) -> str:
         """
         Get the CREATE TABLE statement for a specific table.
-        
         Args:
             table_name: Name of the table
             
@@ -131,13 +157,35 @@ class SchemaParser(DatabaseHandler):
                 return []
         else:
             raise ValueError(f"Table {table_name} not found in metadata.")
+        
+
+    def generate_schema_documents(self) -> List[Document]:
+        """
+        Generating documents for schema embeddings, including table names, columns
+        and relatioship
+
+        Returns:
+            List[Document]: List of Langchain Object for Embedding
+        """
+
+        if not self.inspector:
+            raise ValueError("Not connected to a database. Call connect() first.")
+        
+        documents = []
+        tables = self.get_all_tables()
+        for table in tables:
+            create_table_statement = self.get_create_table_statement(table_name=table)
+            documents.append(Document(
+                page_content=create_table_statement,
+                metadata={"table_name": table}
+            ))
+        return documents
+
     
-    def get_relevant_tables(self, question: str, tables: List[str]) -> List[str]:
+    def get_relevant_tables(self, question: str, tables: List[str], session_id: str, top_k: int=5) -> List[str]:
         """
         Determine which tables are relevant to a natural language question.
-        This is a simple implementation that looks for table names in the question.
-        A more sophisticated approach would use an LLM.
-        
+
         Args:
             question: Natural language question
             tables: List of available table names
@@ -145,28 +193,25 @@ class SchemaParser(DatabaseHandler):
         Returns:
             List of relevant table names
         """
-        relevant_tables = []
+
+        try:
+            # search for similar schema
+            results = self.vector_search.search_in_vector(
+                query=question,
+                top_k=top_k,
+                session_id=session_id
+            )
+            relevant_tables = [doc.metadata["table_name"] for doc in results if doc.metadata["table_name"] in tables]
+
+            # remove duplicates
+            relevant_tables = set(relevant_tables)
+            logging.info(f"Found relevant tables for question {question}: {relevant_tables}")
+            # Fallback to all tables if embedding search fails
+            return relevant_tables
         
-        # Convert question to lowercase for case-insensitive matching
-        question_lower = question.lower()
-        
-        for table in tables:
-            # Check for exact table name
-            if table.lower() in question_lower:
-                relevant_tables.append(table)
-                continue
-            
-            # Check for plural form of table name
-            if table.lower() + 's' in question_lower:
-                relevant_tables.append(table)
-                continue
-            
-            # Check for singular form of table name (if it ends with 's')
-            if table.lower().endswith('s') and table.lower()[:-1] in question_lower:
-                relevant_tables.append(table)
-                continue
-        
-        return relevant_tables
+        except Exception as e:
+            logging.info(f"Error in finding relevent tables for question {question}")
+            return tables
     
     def format_schema_for_llm(self, tables: List[str]) -> str:
         """
@@ -198,7 +243,7 @@ class SchemaParser(DatabaseHandler):
         
         return "\n".join(schema_info)
     
-    def parse_schema(self, question: Optional[str] = None) -> Dict[str, Any]:
+    def parse_schema(self, question: str, session_id: str, top_k: int=5) -> Dict[str, Any]:
         """
         Parse the database schema and return relevant information.
         
@@ -216,19 +261,12 @@ class SchemaParser(DatabaseHandler):
         # Get all tables
         all_tables = self.get_all_tables()
         # Determine relevant tables if a question is provided
-        if question:
-            relevant_tables = self.get_all_tables()
-            # If no relevant tables found, include all tables
-            if not relevant_tables:
-                relevant_tables = all_tables
-        else:
-            relevant_tables = all_tables
-        
+        relevant_tables = self.get_relevant_tables(question, session_id, top_k=top_k, tables=all_tables)
+             
         # Get schema information for relevant tables
         tables_info = {}
         for table_name in relevant_tables:
             tables_info[table_name] = self.get_table_schema(table_name)
-        
         # Format schema for LLM
         formatted_schema = self.format_schema_for_llm(relevant_tables)
 

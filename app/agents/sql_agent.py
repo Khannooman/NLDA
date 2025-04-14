@@ -1,13 +1,6 @@
-"""
-SQL Agent - Main Integration Module
-
-This module integrates all components into the cohesive LangGraph Agent
-that can generate and execute SQL queries based on natural language sessions.
-"""
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import START, END, StateGraph
-from sqlalchemy import URL
 from app.database_wrapper.schema_parser import SchemaParser
 from app.database_wrapper.database_handler import DatabaseHandler
 from app.agents.query_generator import QueryGenerator
@@ -17,19 +10,16 @@ from app.llm.openai_manager import OpenAIManager
 from app.prompts.llm_response_schema import LLMResponseSchemas
 from app.prompts.sql_agent_prompt import Agentprompts
 import logging
-
 class SQLAgents:
     "Node for SQL Agents"
-    def __init__(self, connection_url: URL):
-        self.connection_url = connection_url
-        self.schema_parser = SchemaParser(connection_url=connection_url)
-        self.db_handler = DatabaseHandler(connection_url=connection_url)
-        self.schema_parser.connect()
-        self.db_handler.connect()
+    def __init__(self, db_handler: DatabaseHandler, session_id: str):
+        self.db_handler = db_handler
+        self.schema_parser = SchemaParser(db_handler=db_handler)
         self.query_generator = QueryGenerator()
         self.query_validator = QueryValidator()
         self.llm = OpenAIManager()
         self.prompts = Agentprompts()
+        self.session_id = session_id
 
 
     def parse_schema(self, state: AgentState) -> AgentState:
@@ -50,10 +40,9 @@ class SQLAgents:
         try:
             # parse the schema
             logging.info("Parsing schema...")
-            schema_info = self.schema_parser.parse_schema(question)
+            schema_info = self.schema_parser.parse_schema(question, session_id=self.session_id, top_k=5)
             #Update the schema 
             state.schema_info = schema_info
-
             # Add a message to indicates the success
             state.messages.append(
                 AIMessage(content=f"I've analyzed the database schema. Found {len(schema_info['relevant_tables'])} relevant tables: {', '.join(schema_info['relevant_tables'])}")
@@ -357,7 +346,6 @@ class SQLAgents:
         return state
 
 
-
     def generate_final_answers(self, state: AgentState) -> AgentState:
         """
         Generate a final answer based on the query results.
@@ -424,58 +412,17 @@ class SQLAgents:
             )
         return state
 
-    def should_continue(self, state: AgentState) -> str:
-        """
-        Determine wether to continue the the agent workflow or end it
-
-        Args:
-            state (AgentState): state of the agent
-
-        Returns:
-            next node name or END
-        """
-        # If we have a final answer, we're done
-        if state.final_answer:
-            return END
-        
-        # If we have an error, we're done
-        if state.error:
-            return END
-        
-        # # If we have execution results but no final answer, generate a final answer
-        # if state.execution_result and not state.final_answer:
-        #     return "generate_final_answer"
-        
-        # # If we have a validated query but no execution results, execute the query
-        # if state.validation_result and not state.execution_result:
-        #     return "execute_query"
-        
-        # # If we have a generated query but no validation results, validate the query
-        # if state.generated_query and not state.validation_result:
-        #     return "validate_query"
-        
-        # # If we have schema information but no generated query, generate a query
-        # if state.schema_info and not state.generated_query:
-        #     return "generate_query"
-        
-        # # If we have no schema information, parse the schema
-        # if not state.schema_info:
-        #     return "parse_schema"
-        
-        # else:
-        #     return END
-
     
-def create_sql_agent(connection_url: URL) -> StateGraph:
+def create_sql_agent(db_handler: DatabaseHandler, session_id: str) -> StateGraph:
     """LangGraph Agent for SQL
-
     Args:
         connection_url (URL): connection url
-
     Returns:
         StateGraph: return the compiled workflow
     """
-    sqlagents = SQLAgents(connection_url=connection_url)
+
+    sqlagents = SQLAgents(db_handler=db_handler, session_id=session_id)
+
     # create the workflow
     workflow = StateGraph(AgentState)
 
@@ -485,21 +432,8 @@ def create_sql_agent(connection_url: URL) -> StateGraph:
     workflow.add_node("validate_query", sqlagents.validate_query)
     workflow.add_node("execute_query", sqlagents.execute_query)
     workflow.add_node("generate_final_answer", sqlagents.generate_final_answers)
-
-    # add conditional edge
-    # workflow.add_conditional_edges(
-    #     "parse_schema",
-    #     sqlagents.should_continue,
-    #     {
-    #         "parse_schema": "parse_schema",
-    #         "generate_query": "generate_query",
-    #         "validate_query": "validate_query",
-    #         "execute_query": "execute_query",
-    #         "generate_final_answer": "generate_final_answer",
-    #         END: END
-    #     }
-    # )
-    # add edges
+    
+    # add edge node
     workflow.add_edge(START, "parse_schema")
     workflow.add_edge("parse_schema", "generate_query")
     workflow.add_edge("generate_query", "validate_query")

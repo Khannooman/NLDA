@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ECharts Pie Chart</title>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js"></script>
+</head>
+<body>
+  <div id="chart" style="width: 800px; height: 500px;"></div>
+  <script type="text/javascript">
+    var myChart = echarts.init(document.getElementById('chart'));
+    var option = {
+      tooltip: {
+        trigger: 'item'
+      },
+      legend: {
+        orient: 'vertical',
+        left: 'left'
+      },
+      series: [
+        {
+          type: 'pie',
+          data: [
+            { name: 'Luca Patricia (India)', value: 19 },
+            { name: 'Rex Ellis (India)', value: 18 },
+            { name: 'Alexander Thompson (Greece)', value: 17 },
+            { name: 'Caelan Lochlan (Australia)', value: 17 },
+            { name: 'Shirley Taylor (India)', value: 17 },
+            { name: 'Roman Hamish (New Zealand)', value: 17 },
+            { name: 'Cruz Duncan (Australia)', value: 17 },
+            { name: 'Oliver Alan (United States)', value: 16 },
+            { name: 'Cohen Jayden (New Zealand)', value: 16 },
+            { name: 'Billy Harley (Greece)', value: 16 }
+          ],
+          radius: ['40%', '70%'],
+          label: {
+            show: true,
+            formatter: '{b}: {c} ({d}%)'
+          }
+        }
+      ]
+    };
+    myChart.setOption(option);
+  </script>
+</body>
+</html>

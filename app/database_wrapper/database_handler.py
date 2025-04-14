@@ -56,7 +56,6 @@ class DatabaseHandler:
         """
         if self.connection and not self.connection.closed:
             return True
-
         try:
             self.engine = create_engine(self.connection_url)
             self.connection = self.engine.connect()
