@@ -17,6 +17,7 @@ langchain-experimental==0.3.4
 tiktoken==0.8.0
 langchain-openai==0.2.10
 langgraph==0.2.60
+langchain_chroma==0.2.3
 # sentence_transformers==2.3.1
 psycopg2==2.9.10
 pandas==2.2.3

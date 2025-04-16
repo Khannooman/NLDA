@@ -1,21 +1,24 @@
 import logging
 from typing import List, Dict
-
+import os
 from app.enums.env_keys import EnvKeys
 from app.utils.utility_manager import UtilityManager
 
 from langchain_core.documents import Document
-from langchain.vectorstores.chroma import Chroma
+from langchain_chroma.vectorstores import Chroma
 from langchain_openai.embeddings import OpenAIEmbeddings
 
 class VectorSearch(UtilityManager):
     def __init__(self):
         super().__init__()
+        self.__OPENAI_API_KEY = self.get_env_variable(EnvKeys.OPENAI_KEY.value)
         self.__EMBEDDING_MODEL = self.get_env_variable(EnvKeys.OPENAI_EMBEDDING_MODEL.value)
+
+        os.environ['OPENAI_API_KEY'] = self.__OPENAI_API_KEY
         self.__EMBEDDINGS = OpenAIEmbeddings(
-            model=self.__EMBEDDING_MODEL
+            model=self.__EMBEDDING_MODEL,
         )
-        self.persist_dorictory = self.utility_manager.get_env_variable(EnvKeys.CHROMA_PERSIST_DIRECTORY.value)
+        self.persist_dorictory = self.get_env_variable(EnvKeys.CHROMA_PERSIST_DIRECTORY.value)
 
     def get_vector(self, collection_name: str) -> Chroma:
         """create vectorstore
@@ -50,12 +53,12 @@ class VectorSearch(UtilityManager):
         try:
             collection_name = f"schema_{session_id}"
             result = self.get_vector(
-                        collection_name=collection_name,
-                        persist_directory=self.persist_dorictory
-                            ).from_documents(
+                        collection_name=collection_name
+                        ).from_documents(
                                 documents=docs,
                                 embedding=self.__EMBEDDINGS,
-                                collection_name=collection_name
+                                collection_name=collection_name,
+                                persist_directory=self.persist_dorictory
                             )
             
             logging.info(f"Stored schema embedding for session {session_id}")
@@ -67,26 +70,25 @@ class VectorSearch(UtilityManager):
             self, 
             query: str,
             top_k: int,
-            session_id: str,
-            filters: Dict = {}
+            session_id: str
             ) -> Dict:
         try:
             # If collection found then search
             collection_name = f"schema_{session_id}"
-            vector_store = self.get_vector(collection_name, persist_directory=self.persist_dorictory)
-            results = vector_store.similarity_search(query=query, k=top_k, filters=filters)
+            vector_store = self.get_vector(collection_name)
+            results = vector_store.similarity_search(query=query, k=top_k)
             return results
         
         except Exception as e:
             logging.error(f"Vector search error {str(e)}")
-            return []
+            raise ValueError(f"Fetching tables error {str(e)}")
         
     def delete_vector(
             self, 
             collection_name: str,
             ) -> Dict:
         try:
-            vector_store = self.get_vector(collection_name=collection_name, persist_directory=self.persist_dorictory)
+            vector_store = self.get_vector(collection_name=collection_name)
             vector_store.delete_collection()
             return {"message": "Vector embedding deleting successfully"}
         

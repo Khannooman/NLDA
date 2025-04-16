@@ -39,9 +39,7 @@ class OpenAIManager(UtilityManager):
 
                 if output_parser:
                     try:
-                        print(text_response)
                         result = output_parser.parse(text=text_response)
-                        print(result)
                         result.update({
                             "total_tokens": cb.total_tokens,
                             "completion_tokens": cb.completion_tokens,

@@ -37,12 +37,12 @@ class SchemaParser(DatabaseHandler):
         if db_handler:
             # Reuse db_handler's connection attributes
             super().__init__(connection_url=db_handler.connection_url)
-            self.schema_parser.connection = db_handler.connection
-            self.schema_parser.engine = db_handler.engine
-            self.schema_parser.dialect = db_handler.dialect
-            self.schema_parser.dialect_name = db_handler.dialect_name
-            self.schema_parser.inspector = db_handler.inspector
-            self.schema_parser.metadata = db_handler.metadata
+            self.connection = db_handler.connection
+            self.engine = db_handler.engine
+            self.dialect = db_handler.dialect
+            self.dialect_name = db_handler.dialect_name
+            self.inspector = db_handler.inspector
+            self.metadata = db_handler.metadata
 
         elif connection_url:
             # Initialize new connections
@@ -202,7 +202,6 @@ class SchemaParser(DatabaseHandler):
                 session_id=session_id
             )
             relevant_tables = [doc.metadata["table_name"] for doc in results if doc.metadata["table_name"] in tables]
-
             # remove duplicates
             relevant_tables = set(relevant_tables)
             logging.info(f"Found relevant tables for question {question}: {relevant_tables}")
@@ -261,8 +260,8 @@ class SchemaParser(DatabaseHandler):
         # Get all tables
         all_tables = self.get_all_tables()
         # Determine relevant tables if a question is provided
-        relevant_tables = self.get_relevant_tables(question, session_id, top_k=top_k, tables=all_tables)
-             
+        relevant_tables = self.get_relevant_tables(question, all_tables, session_id, top_k=top_k)
+        
         # Get schema information for relevant tables
         tables_info = {}
         for table_name in relevant_tables:

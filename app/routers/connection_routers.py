@@ -84,7 +84,7 @@ class ConnectionRouter(UtilityManager):
                 session_id=session_id
             )
         
-        @self.router.post(RoutePaths.QUERY, tags=RouteTags.QUERY, response_model=ResponseModel)
+        @self.router.post(RoutePaths.QUERY, tags=[RouteTags.QUERY], response_model=ResponseModel)
         @self.catch_api_exceptions
         async def query(query_request: Query):
             ## fetch the session
@@ -107,7 +107,7 @@ class ConnectionRouter(UtilityManager):
                 session_id=session_id
             )
         
-        @self.router.post(RoutePaths.DISCONNECT, tags=RouteTags.QUERY, response_model=ResponseModel)
+        @self.router.post(RoutePaths.DISCONNECT, tags=[RouteTags.QUERY], response_model=ResponseModel)
         @self.catch_api_exceptions
         async def disconnect_database(disconnec_request: Disconnect):
             session_id = disconnec_request.session_id

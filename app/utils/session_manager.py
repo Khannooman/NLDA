@@ -4,7 +4,7 @@ import logging
 
 class SessionManager:
     _instance = None
-    _session = Dict[str, DatabaseHandler] = {}
+    _session: Dict[str, DatabaseHandler] = {}
 
     @classmethod
     def get_instance(cls):
@@ -19,7 +19,7 @@ class SessionManager:
 
     def get_connection(self, session_id: str) -> Optional[DatabaseHandler]:
         """Retrieve a database handler for a session"""
-        self._session.get(session_id)
+        return self._session.get(session_id)
 
     def remove_connection(self, session_id: str) -> None:
         """Remove database handler from database"""

@@ -10,25 +10,7 @@ class DatabaseConnectionConfig(BaseModel):
         MySQLConnectionParams,
         PostgresConnectionParams
     ] = Field(..., discriminator="db_type")
-    session_id: Optional[str] = Field(..., description="session id")
-
-    class Config:
-        json_schema_extra = {
-            "examples": [
-                {
-                    "connection_params": {
-                        "db_type": "postgresql",
-                        "host": "localhost",
-                        "port": 5432,
-                        "database": "mydatabase",
-                        "username": "dbuser",
-                        "password": "secretpassword",
-                        "sslmode": "prefer"
-                    }
-                }
-            ],
-            "session_id": "dsfdf48dsf4"
-        }
+    session_id: Optional[str] = None
 
 class Disconnect(BaseModel):
     session_id: str

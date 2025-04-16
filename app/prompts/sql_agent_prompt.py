@@ -39,7 +39,7 @@ class Agentprompts:
     2. Apply appropriate joins based on foreign key relationships in the schema.  
     3. Use correct SQL syntax and functions supported by the specified {dialect}.  
     4. Include necessary filtering, grouping, sorting, or aggregations to match the question's intent.  
-    5. For unbounded queries (e.g., selecting all rows), add `LIMIT 10` to restrict output.  
+    5. For unbounded queries (e.g., selecting all rows without containing any filter and groping and window functions), add `LIMIT 10` to restrict output.  
     6. Avoid using tables, columns, or functions not specified in the schema or dialect.  
     7. Ensure the query is syntactically correct and optimized for clarity.  
     8. Provide a brief step-by-step explanation of your reasoning before the query.  
@@ -90,7 +90,7 @@ Generate a SQL query that accurately answers the user's question. Follow these g
 2. Apply appropriate joins based on foreign key relationships in the schema.  
 3. Use correct SQL syntax and functions supported by the {dialect}.  
 4. Include necessary filtering, grouping, sorting, or aggregations to match the question's intent.  
-5. Add `LIMIT 10` for unbounded queries (e.g., selecting all rows without specific filters).  
+5. For unbounded queries (e.g., selecting all rows without containing any filter and groping and window functions), add `LIMIT 10` to restrict output.  
 6. Ensure the query is syntactically correct and clear.  
 7. Provide a brief step-by-step explanation of your reasoning before the query.
 
@@ -134,7 +134,7 @@ Generate a SQL query that accurately answers the user's question. Follow these g
     - Apply appropriate joins based on foreign key relationships in the schema.  
     - Use correct SQL syntax and functions supported by the {dialect}.  
     - Include necessary filtering, grouping, sorting, or aggregations to match the question's intent.  
-    - Add `LIMIT 10` for unbounded queries (e.g., selecting all rows without specific filters).  
+    -  For unbounded queries (e.g., selecting all rows without containing any filter and groping and window functions), add `LIMIT 10` to restrict output..  
     - Ensure the query is syntactically correct and clear.  
 4. Provide a step-by-step explanation that includes:  
 - Why the previous query failed (based on the error and schema).  

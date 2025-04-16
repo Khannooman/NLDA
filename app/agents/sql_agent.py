@@ -40,7 +40,7 @@ class SQLAgents:
         try:
             # parse the schema
             logging.info("Parsing schema...")
-            schema_info = self.schema_parser.parse_schema(question, session_id=self.session_id, top_k=5)
+            schema_info = self.schema_parser.parse_schema(question, session_id=self.session_id, top_k=3)
             #Update the schema 
             state.schema_info = schema_info
             # Add a message to indicates the success
