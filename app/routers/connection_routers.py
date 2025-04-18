@@ -1,5 +1,5 @@
 import logging
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from app.constants.route_paths import RoutePaths
 from app.constants.route_tags import RouteTags
 from app.models.response_model import ResponseModel
@@ -14,7 +14,10 @@ from app.utils.session_manager import SessionManager
 from app.database_wrapper.schema_parser import SchemaParser
 from app.database_wrapper.database_handler import DatabaseHandler
 from app.embeddings.chroma import VectorSearch
+from app.utils.auth import verify_api_key
 from datetime import datetime as dt
+
+logger = logging.getLogger(__name__)
 
 class ConnectionRouter(UtilityManager):
     _instance = None
@@ -39,9 +42,13 @@ class ConnectionRouter(UtilityManager):
     def setup_routers(self):
         @self.router.post(RoutePaths.CONNECTION, tags=[RouteTags.QUERY], response_model=ResponseModel)
         @self.catch_api_exceptions
-        async def create_connections(connection_config: DatabaseConnectionConfig):
+        async def create_connections(
+            connection_config: DatabaseConnectionConfig,
+            api_key: str = Depends(verify_api_key)
+            ):
             # generate session_id if not provided
             session_id = connection_config.session_id or self.generate_uuid()
+            logger.info(f"Connection attempt for session {session_id}")
 
             # check if already connected
             if self.session_manager.get_connection(session_id=session_id):
@@ -75,7 +82,7 @@ class ConnectionRouter(UtilityManager):
                     session_id=session_id,
                     )
             except Exception as e:
-                logging.error(f"Failed to store embeddings: {e}")
+                logger.error(f"Failed to store embeddings: {e}")
                 pass
 
             return ResponseModel( 
@@ -86,7 +93,7 @@ class ConnectionRouter(UtilityManager):
         
         @self.router.post(RoutePaths.QUERY, tags=[RouteTags.QUERY], response_model=ResponseModel)
         @self.catch_api_exceptions
-        async def query(query_request: Query):
+        async def query(query_request: Query, api_key: str = Depends(verify_api_key)):
             ## fetch the session
             session_id = query_request.session_id
             question = query_request.question
@@ -109,7 +116,7 @@ class ConnectionRouter(UtilityManager):
         
         @self.router.post(RoutePaths.DISCONNECT, tags=[RouteTags.QUERY], response_model=ResponseModel)
         @self.catch_api_exceptions
-        async def disconnect_database(disconnec_request: Disconnect):
+        async def disconnect_database(disconnec_request: Disconnect, api_key: str= Depends(verify_api_key)):
             session_id = disconnec_request.session_id
 
             db_handler = self.session_manager.get_connection(session_id=session_id)

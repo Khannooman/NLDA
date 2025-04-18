@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from app.utils.middleware import SecurityHeadersMiddleware
 
 class InitCORS:
     def __init__(self, app: FastAPI):
@@ -8,6 +9,9 @@ class InitCORS:
             origins = ["*"]
         else:
             origins = origins
+
+        # add Scurity Middleware
+        app.add_middleware(SecurityHeadersMiddleware)
         
         # Add CORS middleware
         app.add_middleware(

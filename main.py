@@ -9,6 +9,7 @@ from app.base.cors_config import InitCORS
 from app.constants.fast_api_constants import FastAPIConstants
 from app.constants.directory_names import DirectoryNames
 
+
 class App(RoutePaths):
     def __init__(self):
         self.app = FastAPI(
